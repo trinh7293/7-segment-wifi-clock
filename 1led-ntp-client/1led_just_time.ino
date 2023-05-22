@@ -1,10 +1,9 @@
 #include <WiFiUdp.h>
 #include <ESP8266WiFi.h>
-#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <NTPClient.h>
 #include <FastLED.h>
 #include <TimeLib.h>
-#define NUM_LEDS 86                         // Total of 30 LED's     1X7X4+2=30. 1 pixel/segment
+#define NUM_LEDS 30                           // Total of 30 LED's     1X7X4+2=30. 1 pixel/segment
 #define DATA_PIN D4                          // Change this if you are using another type of ESP board than a WeMos D1 Mini
 #define MILLI_AMPS 800 
 
@@ -23,21 +22,25 @@ byte b_val = 0;
 CRGB alternateColor = CRGB::Black; 
 
 long numbers[] = {
-  0b000111111111111111111,  // [0] 0
-  0b000111000000000000111,  // [1] 1
-  0b111111111000111111000,  // [2] 2
-  0b111111111000000111111,  // [3] 3
-  0b111111000111000000111,  // [4] 4
-  0b111000111111000111111,  // [5] 5
-  0b111000111111111111111,  // [6] 6
-  0b000111111000000000111,  // [7] 7
-  0b111111111111111111111,  // [8] 8
-  0b111111111111000111111,  // [9] 9
-  0b000000000000000000000,  // [10] off
-  0b111111111111000000000,  // [11] degrees symbol
-  0b000000111111111111000,  // [12] C(elsius)
-  0b111000111111111000000,  // [13] F(ahrenheit)
+  0b00111111,  // [0] 0                       ///jika persegment 7 led maka setelah 0b diletakan angka 0
+  0b00100001,  // [1] 1
+  0b01110110,  // [2] 2
+  0b01110011,  // [3] 3
+  0b01101001,  // [4] 4
+  0b01011011,  // [5] 5
+  0b01011111,  // [6] 6
+  0b00110001,  // [7] 7
+  0b01111111,  // [8] 8
+  0b01111011,  // [9] 9
+  0b00000000,  // [10] off
+  0b01111000,  // [11] degrees symbol
+  0b00011110,  // [12] C(elsius)
+  0b01011100,  // [13] F(ahrenheit)
 };
+
+// set Wi-Fi SSID and password
+/* TOTO */const char *ssid     = "Phong 22";
+/* TOTO */const char *password = "@Rock1234567";
 
 void setup() {
   // put your setup code here, to run once:
@@ -51,22 +54,8 @@ void setup() {
   // dht.begin();
   // pinMode(BUTTON_PIN, INPUT);
 
-//  WiFi.begin(ssid, password);
+  WiFi.begin(ssid, password);
   Serial.print("Connecting.");
-  WiFiManager wm;
-  bool res;
-    // res = wm.autoConnect(); // auto generated AP name from chipid
-    // res = wm.autoConnect("AutoConnectAP"); // anonymous ap
-  res = wm.autoConnect("DIGITAL_CLOCK"); // password protected ap
-
-  if(!res) {
-      Serial.println("Failed to connect");
-      // ESP.restart();
-  } 
-  else {
-      //if you get here you have connected to the WiFi    
-      Serial.println("connected...yeey :)");
-  }
   while ( WiFi.status() != WL_CONNECTED ) {
     delay(500);
     Serial.print(".");
@@ -103,11 +92,11 @@ void updateClock() {
 
 void displayDots(CRGB color) {
   if (dotsOn) {
-    LEDs[42] = color;
-    LEDs[43] = color;
+    LEDs[14] = color;
+    LEDs[15] = color;
   } else {
-    LEDs[42] = CRGB::Black;
-    LEDs[43] = CRGB::Black;
+    LEDs[14] = CRGB::Black;
+    LEDs[15] = CRGB::Black;
   }
 
   dotsOn = !dotsOn;  
@@ -115,16 +104,16 @@ void displayDots(CRGB color) {
 
 void displayNumber(byte number, byte segment, CRGB color) {
   /*
-   * 
-      __ __ __        __ __ __          __ __ __        12 13 14  
-    __        __    __        __      __        __    11        15
-    __        __    __        __      __        __    10        16
-    __        __    __        __  42  __        __    _9        17
-      __ __ __        __ __ __          __ __ __        20 19 18  
-    __        65    __        44  43  __        21    _8        _0
-    __        __    __        __      __        __    _7        _1
-    __        __    __        __      __        __    _6        _2
-      __ __ __       __ __ __           __ __ __       _5 _4 _3   
+   
+      __ __ __        __ __ __          __ __ __        _ 4 _  
+    __        __    __        __      __        __    _        _
+    __        __    __        __      __        __    _3        5
+    __        __    __        __  15  __        __    _        _
+      __ __ __        __ __ __          __ __ __         _ 6 _  
+    __        23    __        16  14  __        __    _        _
+    __        __    __        __      __        7    _2        _0
+    __        __    __        __      __        __    _        _
+      __ __ __       __ __ __           __ __ __       _  _1 _   
 
    */
  
@@ -135,17 +124,17 @@ void displayNumber(byte number, byte segment, CRGB color) {
       startindex = 0;
       break;
     case 1:
-      startindex = 21;
+      startindex = 7;                 //// value start index digit led no 2. 
       break;
     case 2:
-      startindex = 44;
+      startindex = 16;
       break;
     case 3:
-      startindex = 65;
+      startindex = 23;
       break;    
   }
 
-  for (byte i=0; i<21; i++){             //// value start index digit led no 2.
+  for (byte i=0; i<7; i++){             //// value start index digit led no 2.
     yield();
     LEDs[i + startindex] = ((numbers[number] & 1 << i) == 1 << i) ? color : alternateColor;
   } 
@@ -167,5 +156,14 @@ void loop() {
       updateClock();     // Show Time
       FastLED.show();
     }
+    // if (TIME_FORMAT == 12) {
+    //   if (Hours > 12) {
+    //     Hour = Hours - 12;
+    //   }
+    //   else
+    //     Hour = Hours;
+    // }
+    // else
+    //   Hour = Hours;
   }
 }
