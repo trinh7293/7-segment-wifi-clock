@@ -17,7 +17,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "time.nist.gov", 7*3600, 60000); //GMT+5:30 : 5*3600+30*60=19800
 
 CRGB LEDs[NUM_LEDS];
-int period = 2000;   //Update frequency
+int period = 1000;   //Update frequency
 unsigned long time_now = 0;
 int Second, Minute, Hour;
 bool dotsOn = true;
