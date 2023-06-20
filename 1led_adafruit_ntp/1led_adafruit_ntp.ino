@@ -42,6 +42,7 @@ int SLEEP_HOU = 22;
 int SLEEP_MIN= 0;
 int WAKE_HOU = 5;
 int WAKE_MIN = 0;
+bool isRainBow = 0;
 
 // init wifi 
 MDNSResponder mdns;
@@ -92,7 +93,9 @@ void countdownHandler() {
   clockMode = 1;     
   server.send(200, "text/json", "{\"result\":\"ok\"}");
 }
-
+void rainbowHandler() {
+  isRainBow = server.arg("isRainbow").toInt();
+}
 // TODO implement helper functions
 void updateClock() {  
   timeClient.update();
@@ -170,7 +173,26 @@ void displayNumber(byte number, byte segment, uint32_t color) {
 
   for (byte i=0; i<7; i++){             //// value start index digit led no 2.
     yield();
-    uint32_t color_set = ((numbers[number] & 1 << i) == 1 << i) ? color : ALTERNATE_COLOR;
+    uint32_t color_set;
+    if(isRainBow) {
+      uint32_t color_rain;
+      switch (i%3)
+      {
+      case 0:
+        color_rain = RED_COLOR;
+        break;
+      case 1:
+        color_rain = GREEN_COLOR;
+        break;
+      case 2:
+        color_rain = BLUE_COLOR;
+        break;
+      }
+      color_set = color_rain;
+    } else {
+      color_set = color;
+    }
+    color_set = ((numbers[number] & 1 << i) == 1 << i) ? color_set : ALTERNATE_COLOR;
     strip.setPixelColor(i + startindex, color_set);
   } 
 }
@@ -308,6 +330,7 @@ void setup() {
   server.on("/color", colorHandler);
   server.on("/brightness", brightnessHandler);
   server.on("/countdown", countdownHandler);
+  server.on("/toogleRainbow", rainbowHandler);
 
   // setup SPIFFS contents upload 
   // Before uploading the files with the "ESP8266 Sketch Data Upload" tool, zip the files with the command "gzip -r ./data/" (on Windows I do this with a Git Bash)
