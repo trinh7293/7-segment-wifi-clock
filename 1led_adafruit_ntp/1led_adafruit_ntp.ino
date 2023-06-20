@@ -38,6 +38,10 @@ long numbers[] = {
   0b00011110,  // [12] C(elsius)
   0b01011100,  // [13] F(ahrenheit)
 };
+int SLEEP_HOU = 22;
+int SLEEP_MIN= 0;
+int WAKE_HOU = 5;
+int WAKE_MIN = 0;
 
 // init wifi 
 MDNSResponder mdns;
@@ -54,9 +58,19 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t alternateColor = strip.Color(0, 0, 0); 
 uint32_t blackColor = strip.Color(0, 0, 0); 
 
-// TODO router functions 
+// TODO router handler functions 
 void clockHandler() {       
   clockMode = 0;     
+  server.send(200, "text/json", "{\"result\":\"ok\"}");
+}
+void colorHandler() {    
+  r_val = server.arg("r").toInt();
+  g_val = server.arg("g").toInt();
+  b_val = server.arg("b").toInt();
+  server.send(200, "text/json", "{\"result\":\"ok\"}");
+}
+void brightnessHandler() {    
+  brightness = server.arg("brightness").toInt();    
   server.send(200, "text/json", "{\"result\":\"ok\"}");
 }
 
@@ -65,15 +79,15 @@ void updateClock() {
   timeClient.update();
   unsigned long unix_epoch = timeClient.getEpochTime();   // get UNIX Epoch time
   int sec = second(unix_epoch);                            // get seconds
-  int min = minute(unix_epoch);                            // get minutes
+  int minu = minute(unix_epoch);                            // get minutes
   int hou  = hour(unix_epoch);
   byte hour_formated = hou;
   if (hourFormat == 12 && hou > 12)
     hour_formated = hour_formated - 12;
   byte h1 = hour_formated / 10;
   byte h2 = hour_formated % 10;
-  byte m1 = min / 10;
-  byte m2 = min % 10;  
+  byte m1 = minu / 10;
+  byte m2 = minu % 10;  
   // byte s1 = Second / 10;
   // byte s2 = Second % 10;
   
@@ -89,6 +103,19 @@ void updateClock() {
   displayNumber(m2,0, color); 
 
   displayDots(color);  
+  updateBrightnessByMoment(hou, minu);
+}
+void updateBrightnessByMoment(int hou, int minu) {
+//int SLEEP_HOU = 22;
+//int SLEEP_MIN= 0;
+//int WAKE_HOU = 5;
+//int WAKE_MIN = 0;
+  if (hou == WAKE_HOU && minu == WAKE_MIN) {
+    brightness = 100;
+  }
+  if (hou == SLEEP_HOU && minu == SLEEP_MIN) {
+    brightness = 1;
+  }
 }
 void displayNumber(byte number, byte segment, uint32_t color) {
   /*
@@ -165,6 +192,8 @@ void setup() {
   Serial.println("MDNS responder started");
   // TODO setup router
   server.on("/clock", clockHandler);
+  server.on("/color", colorHandler);
+  server.on("/brightness", brightnessHandler);
 
   // setup SPIFFS contents upload 
   // Before uploading the files with the "ESP8266 Sketch Data Upload" tool, zip the files with the command "gzip -r ./data/" (on Windows I do this with a Git Bash)
