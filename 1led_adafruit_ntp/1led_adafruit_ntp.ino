@@ -55,8 +55,16 @@ NTPClient timeClient(ntpUDP, "time.nist.gov", 7*3600, 60000); //GMT+5:30 : 5*360
 #define LED_PIN D4
 #define LED_COUNT 30
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-uint32_t alternateColor = strip.Color(0, 0, 0); 
-uint32_t blackColor = strip.Color(0, 0, 0); 
+uint32_t ALTERNATE_COLOR = strip.Color(0, 0, 0); 
+uint32_t BLACK_COLOR = strip.Color(0, 0, 0); 
+uint32_t RED_COLOR = strip.Color(255, 0, 0); 
+uint32_t GREEN_COLOR = strip.Color(0, 255, 0); 
+uint32_t BLUE_COLOR = strip.Color(0, 0, 255); 
+
+// variables for countdown
+uint32_t countdownColor = strip.Color(0, 255, 0); 
+unsigned long countdownMilliSeconds;
+unsigned long endCountDownMillis;
 
 // TODO router handler functions 
 void clockHandler() {       
@@ -71,6 +79,17 @@ void colorHandler() {
 }
 void brightnessHandler() {    
   brightness = server.arg("brightness").toInt();    
+  server.send(200, "text/json", "{\"result\":\"ok\"}");
+}
+void countdownHandler() {    
+  countdownMilliSeconds = server.arg("ms").toInt();     
+  byte cd_r_val = server.arg("r").toInt();
+  byte cd_g_val = server.arg("g").toInt();
+  byte cd_b_val = server.arg("b").toInt();
+  countdownColor = strip.Color(cd_r_val, cd_g_val, cd_b_val); 
+  endCountDownMillis = millis() + countdownMilliSeconds;
+  strip.clear();
+  clockMode = 1;     
   server.send(200, "text/json", "{\"result\":\"ok\"}");
 }
 
@@ -151,13 +170,107 @@ void displayNumber(byte number, byte segment, uint32_t color) {
 
   for (byte i=0; i<7; i++){             //// value start index digit led no 2.
     yield();
-    uint32_t color_set = ((numbers[number] & 1 << i) == 1 << i) ? color : alternateColor;
+    uint32_t color_set = ((numbers[number] & 1 << i) == 1 << i) ? color : ALTERNATE_COLOR;
     strip.setPixelColor(i + startindex, color_set);
   } 
 }
+void updateCountdown() {
+
+  if (countdownMilliSeconds == 0 && endCountDownMillis == 0) 
+    return;
+    
+  unsigned long restMillis = endCountDownMillis - millis();
+  unsigned long hours   = ((restMillis / 1000) / 60) / 60;
+  unsigned long minutes = (restMillis / 1000) / 60;
+  unsigned long seconds = restMillis / 1000;
+  int remSeconds = seconds - (minutes * 60);
+  int remMinutes = minutes - (hours * 60); 
+  
+  Serial.print(restMillis);
+  Serial.print(" ");
+  Serial.print(hours);
+  Serial.print(" ");
+  Serial.print(minutes);
+  Serial.print(" ");
+  Serial.print(seconds);
+  Serial.print(" | ");
+  Serial.print(remMinutes);
+  Serial.print(" ");
+  Serial.println(remSeconds);
+
+  byte h1 = hours / 10;
+  byte h2 = hours % 10;
+  byte m1 = remMinutes / 10;
+  byte m2 = remMinutes % 10;  
+  byte s1 = remSeconds / 10;
+  byte s2 = remSeconds % 10;
+
+  uint32_t color = countdownColor;
+  if (restMillis <= 60000) {
+    color = strip.Color(255, 0, 0);
+  }
+
+  if (hours > 0) {
+    // hh:mm
+    displayNumber(h1,3,color); 
+    displayNumber(h2,2,color);
+    displayNumber(m1,1,color);
+    displayNumber(m2,0,color);  
+  } else {
+    // mm:ss   
+    displayNumber(m1,3,color);
+    displayNumber(m2,2,color);
+    displayNumber(s1,1,color);
+    displayNumber(s2,0,color);  
+  }
+
+  displayDots(color);  
+
+  if (hours <= 0 && remMinutes <= 0 && remSeconds <= 0) {
+    Serial.println("Countdown timer ended.");
+    endCountdown();
+    countdownMilliSeconds = 0;
+    endCountDownMillis = 0;
+//    digitalWrite(COUNTDOWN_OUTPUT, HIGH);
+//    delay(500);
+//    digitalWrite(COUNTDOWN_OUTPUT,LOW);
+//    delay(500);
+//    digitalWrite(COUNTDOWN_OUTPUT, HIGH);
+//    delay(500);
+//    digitalWrite(COUNTDOWN_OUTPUT,LOW);
+//    delay(500);
+//    digitalWrite(COUNTDOWN_OUTPUT, HIGH);
+//    delay(500);
+//    digitalWrite(COUNTDOWN_OUTPUT,LOW);
+//    delay(500);
+    return;
+  }  
+}
+void endCountdown() {
+  strip.clear();
+  for (int i=0; i<LED_COUNT; i++) {
+    if (i>0)
+      strip.setPixelColor(i-1, BLACK_COLOR);
+    uint32_t colorSet;
+    switch(i%3) {
+      case 0:
+        colorSet = RED_COLOR;
+        break;
+      case 1:
+        colorSet = GREEN_COLOR;
+        break;
+      case 2:
+        colorSet = BLUE_COLOR;
+        break;  
+    }
+    strip.setPixelColor(i, colorSet);
+    strip.show();
+    delay(25);
+  }  
+}
 
 void displayDots(uint32_t color) {
-  uint32_t colorSet = dotsOn ? color : blackColor;
+  uint32_t colorSet = dotsOn ? color : BLACK_COLOR;
   strip.setPixelColor(14, colorSet);
   strip.setPixelColor(15, colorSet);
 
@@ -194,6 +307,7 @@ void setup() {
   server.on("/clock", clockHandler);
   server.on("/color", colorHandler);
   server.on("/brightness", brightnessHandler);
+  server.on("/countdown", countdownHandler);
 
   // setup SPIFFS contents upload 
   // Before uploading the files with the "ESP8266 Sketch Data Upload" tool, zip the files with the command "gzip -r ./data/" (on Windows I do this with a Git Bash)
@@ -226,8 +340,7 @@ void loop() {
       if (clockMode == 0) {
         updateClock();
       } else if (clockMode == 1) {
-        // TODO complete
-        // updateCountdown();  
+        updateCountdown();  
       } else if (clockMode == 3) {
         // TODO complete
         // updateScoreboard();            
