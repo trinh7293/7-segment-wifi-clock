@@ -6,3 +6,5 @@ Create a file in the same folder as this file with the name "Credentials.h" and 
 #define UN "your-ssid-username"
 #define PW "your-ssid-password"
 ```
+
+curl 'http://192.168.1.61/brightness' --data-raw 'brightness=10'

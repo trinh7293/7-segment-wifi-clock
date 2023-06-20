@@ -21,9 +21,9 @@ int period = 1000;   //Update frequency
 unsigned long time_now = 0;
 int Second, Minute, Hour;
 bool dotsOn = true;
-byte r_val = 255;
+byte r_val = 0;
 byte g_val = 0;
-byte b_val = 0;
+byte b_val = 255;
 CRGB alternateColor = CRGB::Black; 
 // TODO TEST add all variables for modes
 unsigned long countdownMilliSeconds;
@@ -35,7 +35,7 @@ byte scoreboardLeft = 0;
 byte scoreboardRight = 0;
 CRGB scoreboardColorLeft = CRGB::Green;
 CRGB scoreboardColorRight = CRGB::Red;
-byte brightness = 255;
+byte brightness = 100;
 long numbers[] = {
   0b00111111,  // [0] 0                       ///jika persegment 7 led maka setelah 0b diletakan angka 0
   0b00100001,  // [1] 1
