@@ -43,8 +43,17 @@ int SLEEP_MIN= 0;
 int WAKE_HOU = 5;
 int WAKE_MIN = 0;
 bool isRainBow = 0;
-
+byte scoreboardLeft = 0;
+byte scoreboardRight = 0;
 // init wifi 
+// Set your Static IP address
+IPAddress local_IP(192, 168, 1, 60);
+// Set your Gateway IP address
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 0, 0);
+IPAddress primaryDNS(8, 8, 8, 8);   //optional
+IPAddress secondaryDNS(8, 8, 4, 4); //optional
+
 MDNSResponder mdns;
 ESP8266WebServer server(80);
 WiFiUDP ntpUDP;
@@ -56,12 +65,13 @@ NTPClient timeClient(ntpUDP, "time.nist.gov", 7*3600, 60000); //GMT+5:30 : 5*360
 #define LED_PIN D4
 #define LED_COUNT 30
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-uint32_t ALTERNATE_COLOR = strip.Color(0, 0, 0); 
 uint32_t BLACK_COLOR = strip.Color(0, 0, 0); 
 uint32_t RED_COLOR = strip.Color(255, 0, 0); 
 uint32_t GREEN_COLOR = strip.Color(0, 255, 0); 
 uint32_t BLUE_COLOR = strip.Color(0, 0, 255); 
-
+uint32_t ALTERNATE_COLOR = BLACK_COLOR; 
+uint32_t scoreboardColorLeft = RED_COLOR;
+uint32_t scoreboardColorRight = GREEN_COLOR;
 // variables for countdown
 uint32_t countdownColor = strip.Color(0, 255, 0); 
 unsigned long countdownMilliSeconds;
@@ -95,6 +105,19 @@ void countdownHandler() {
 }
 void rainbowHandler() {
   isRainBow = server.arg("isRainbow").toInt();
+}
+void scoreboardHandler() {   
+  scoreboardLeft = server.arg("left").toInt();
+  scoreboardRight = server.arg("right").toInt();
+  scoreboardColorLeft = strip.Color(server.arg("rl").toInt(),server.arg("gl").toInt(),server.arg("bl").toInt());
+  scoreboardColorRight = strip.Color(server.arg("rr").toInt(),server.arg("gr").toInt(),server.arg("br").toInt());
+  clockMode = 3;     
+  server.send(200, "text/json", "{\"result\":\"ok\"}");
+}
+void hourformatHandler() {   
+  hourFormat = server.arg("hourformat").toInt();
+  clockMode = 0;     
+  server.send(200, "text/json", "{\"result\":\"ok\"}");
 }
 // TODO implement helper functions
 void updateClock() {  
@@ -290,21 +313,40 @@ void endCountdown() {
     delay(25);
   }  
 }
+void updateScoreboard() {
+  byte sl1 = scoreboardLeft / 10;
+  byte sl2 = scoreboardLeft % 10;
+  byte sr1 = scoreboardRight / 10;
+  byte sr2 = scoreboardRight % 10;
+
+  displayNumber(sl1,3,scoreboardColorLeft);
+  displayNumber(sl2,2,scoreboardColorLeft);
+  displayNumber(sr1,1,scoreboardColorRight);
+  displayNumber(sr2,0,scoreboardColorRight);
+  hideDots();
+}
 
 void displayDots(uint32_t color) {
   uint32_t colorSet = dotsOn ? color : BLACK_COLOR;
-  strip.setPixelColor(14, colorSet);
-  strip.setPixelColor(15, colorSet);
+  strip.fill(colorSet, 14, 2);
 
   dotsOn = !dotsOn;  
 }
 
+void hideDots() {
+  strip.fill(BLACK_COLOR, 14, 2);
+}
+
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin(115200);
   // init led 
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   // connect wifi 
+  if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+    Serial.println("STA Failed to configure");
+  }
   //WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
   WiFiManager wm;
   bool res;
@@ -331,6 +373,8 @@ void setup() {
   server.on("/brightness", brightnessHandler);
   server.on("/countdown", countdownHandler);
   server.on("/toogleRainbow", rainbowHandler);
+  server.on("/scoreboard", scoreboardHandler);
+  server.on("/hourformat", hourformatHandler);
 
   // setup SPIFFS contents upload 
   // Before uploading the files with the "ESP8266 Sketch Data Upload" tool, zip the files with the command "gzip -r ./data/" (on Windows I do this with a Git Bash)
@@ -365,8 +409,7 @@ void loop() {
       } else if (clockMode == 1) {
         updateCountdown();  
       } else if (clockMode == 3) {
-        // TODO complete
-        // updateScoreboard();            
+        updateScoreboard();            
       }
   
       strip.setBrightness(brightness);
