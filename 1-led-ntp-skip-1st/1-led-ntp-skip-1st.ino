@@ -36,13 +36,26 @@ CRGB alternateColor = CRGB::Black;
 unsigned long countdownMilliSeconds;
 unsigned long endCountDownMillis;
 byte clockMode = 0; 
+byte digitH1 = 0;
+byte digitH2 = 0;
+byte digitM1 = 0;
+byte digitM2 = 0;
 byte hourFormat = 24;                         // Change this to 12 if you want default 12 hours format instead of 24               
 CRGB countdownColor = CRGB::Green;
 byte scoreboardLeft = 0;
 byte scoreboardRight = 0;
 CRGB scoreboardColorLeft = CRGB::Green;
 CRGB scoreboardColorRight = CRGB::Red;
-
+// palette
+DEFINE_GRADIENT_PALETTE( greenblue_gp ) { 
+  0,   2,  0, 36,
+  46,  9,  9,  121,
+  255, 0,  212, 255
+};
+CRGBPalette16 greenblue = greenblue_gp;
+uint8_t colorIndex[NUM_LEDS];
+// color change continously
+bool isFluidColor = true;
 byte brightness = 50;
 long numbers[] = {
   0b00111111,  // [0] 0                       ///jika persegment 7 led maka setelah 0b diletakan angka 0
@@ -69,6 +82,8 @@ int SLEEP_SEC= 0;
 byte WAKE_BRIGHTNESS = 50;
 byte SLEEP_BRIGHTNESS = 1;
 
+
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -78,6 +93,10 @@ void setup() {
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
   fill_solid(LEDs, NUM_LEDS, CRGB::Black);
   FastLED.show();
+  //Fill the colorIndex array with random numbers
+  for (int i = 0; i < NUM_LEDS; i++) {
+    colorIndex[i] = random8();
+  }
   // dht.begin();
   // pinMode(BUTTON_PIN, INPUT);
 
@@ -158,10 +177,23 @@ void loop() {
       FastLED.setBrightness(brightness);
       FastLED.show();
     }
+    // TODO add logic fastled show for color fluid 
+    EVERY_N_MILLISECONDS(5){
+      for (int i = 0; i < NUM_LEDS; i++) {
+        colorIndex[i]++;
+      }
+    }
+    if (isFluidColor) {
+      displayNumber(digitH1, 3, alternateColor);
+      displayNumber(digitH2, 2, alternateColor);
+      displayNumber(digitM1, 1, alternateColor);
+      displayNumber(digitM2, 0, alternateColor); 
+      displayDots(alternateColor);
+      // TODO change digit color fluid and switch isDigitChange, fasled show 
+      FastLED.show();
+    }
   }
 }
-
-// TODO TEST add funtion to all mode
 
 void updateClock() {  
   // TODO TEST update 12h format
@@ -182,14 +214,14 @@ void updateClock() {
   
   CRGB color = CRGB(r_val, g_val, b_val);
 
-  if (h1 > 0)
-    displayNumber(h1,3,color);
-  else 
-    displayNumber(10,3,color);  // Blank
-    
-  displayNumber(h2,2,color);
-  displayNumber(m1,1,color);
-  displayNumber(m2,0,color); 
+  digitH1 = (h1 > 0) ? h1 : 10;
+  digitH2 = h2;
+  digitM1 = m1;
+  digitM2 = m2;
+  displayNumber(digitH1,3,color);
+  displayNumber(digitH2,2,color);
+  displayNumber(digitM1,1,color);
+  displayNumber(digitM2,0,color); 
 
   displayDots(color);  
   updateBrightnessByMoment(hou, minu, sec);
@@ -306,15 +338,22 @@ void endCountdown() {
 }
 
 void displayDots(CRGB color) {
-  if (dotsOn) {
-    LEDs[15] = color;
-    LEDs[16] = color;
+  if (isFluidColor) {
+    CRGB color1 = ColorFromPalette(greenblue, colorIndex[15]);
+    CRGB color2 = ColorFromPalette(greenblue, colorIndex[16]);
+    LEDs[15] = color1;
+    LEDs[16] = color2;
   } else {
-    LEDs[15] = CRGB::Black;
-    LEDs[16] = CRGB::Black;
-  }
+    if (dotsOn) {
+      LEDs[15] = color;
+      LEDs[16] = color;
+    } else {
+      LEDs[15] = CRGB::Black;
+      LEDs[16] = CRGB::Black;
+    }
 
-  dotsOn = !dotsOn;  
+    dotsOn = !dotsOn;  
+  }
 }
 
 void hideDots() {
@@ -329,6 +368,7 @@ void allBlank() {
   FastLED.show();
 }
 
+// TODO add logic add color fluid in displaynumber
 void displayNumber(byte number, byte segment, CRGB color) {
   /*
    
@@ -364,6 +404,10 @@ void displayNumber(byte number, byte segment, CRGB color) {
   startindex++;
   for (byte i=0; i<7; i++){             //// value start index digit led no 2.
     yield();
+    
+    if (isFluidColor) {
+      color = ColorFromPalette(greenblue, colorIndex[i + startindex]);
+    }
     LEDs[i + startindex] = ((numbers[number] & 1 << i) == 1 << i) ? color : alternateColor;
   } 
 }
