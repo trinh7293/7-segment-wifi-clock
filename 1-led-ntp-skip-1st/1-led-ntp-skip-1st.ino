@@ -178,19 +178,19 @@ void loop() {
       FastLED.show();
     }
     // TODO add logic fastled show for color fluid 
-    EVERY_N_MILLISECONDS(5){
+    EVERY_N_MILLISECONDS(10){
       for (int i = 0; i < NUM_LEDS; i++) {
         colorIndex[i]++;
       }
-    }
-    if (isFluidColor) {
-      displayNumber(digitH1, 3, alternateColor);
-      displayNumber(digitH2, 2, alternateColor);
-      displayNumber(digitM1, 1, alternateColor);
-      displayNumber(digitM2, 0, alternateColor); 
-      displayDots(alternateColor);
-      // TODO change digit color fluid and switch isDigitChange, fasled show 
-      FastLED.show();
+      if (isFluidColor) {
+        displayNumber(digitH1, 3, alternateColor);
+        displayNumber(digitH2, 2, alternateColor);
+        displayNumber(digitM1, 1, alternateColor);
+        displayNumber(digitM2, 0, alternateColor); 
+        displayDots(alternateColor);
+        // TODO change digit color fluid and switch isDigitChange, fasled show 
+        FastLED.show();
+      }
     }
   }
 }
