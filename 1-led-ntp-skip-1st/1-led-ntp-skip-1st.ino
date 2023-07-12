@@ -26,6 +26,7 @@ IPAddress secondaryDNS(8, 8, 4, 4); //optional
 
 CRGB LEDs[NUM_LEDS];
 int period = 1000;   //Update frequency
+int colorPeriod = 5;   //Update frequency
 unsigned long time_now = 0;
 bool dotsOn = true;
 byte r_val = 0;
@@ -55,14 +56,13 @@ DEFINE_GRADIENT_PALETTE( greenblue_gp ) {
 CRGBPalette16 greenblue = greenblue_gp;
 uint8_t colorIndex[NUM_LEDS];
 // color change continously
-bool isFluidColor = true;
 /** color mode
  * 0: mono
  * 1: blue gradient pallet
  * 2: pacifica
  * */
 int colorMode = 2;
-byte brightness = 50;
+byte brightness = 255;
 long numbers[] = {
   0b00111111,  // [0] 0                       ///jika persegment 7 led maka setelah 0b diletakan angka 0
   0b00100001,  // [1] 1
@@ -184,7 +184,7 @@ void loop() {
       FastLED.show();
     }
     // TODO add logic fastled show for color fluid 
-    EVERY_N_MILLISECONDS(5){
+    EVERY_N_MILLISECONDS(colorPeriod){
       for (int i = 0; i < NUM_LEDS; i++) {
         colorIndex[i]++;
       }
@@ -359,12 +359,7 @@ void endCountdown() {
 }
 
 void displayDots(CRGB color) {
-  if (isFluidColor) {
-    CRGB color1 = ColorFromPalette(greenblue, colorIndex[15]);
-    CRGB color2 = ColorFromPalette(greenblue, colorIndex[16]);
-    LEDs[15] = color1;
-    LEDs[16] = color2;
-  } else {
+  if (colorMode == 0) {
     if (dotsOn) {
       LEDs[15] = color;
       LEDs[16] = color;
@@ -425,9 +420,6 @@ void displayNumber(byte number, byte segment, CRGB color) {
   startindex++;
   for (byte i=0; i<7; i++){             //// value start index digit led no 2.
     yield();
-    // if (isFluidColor) {
-    //   color = ColorFromPalette(greenblue, colorIndex[i + startindex]);
-    // }
     if (colorMode != 0) {
       if ((numbers[number] & 1 << i) == 0) {
         LEDs[i + startindex] = CRGB::Black;
@@ -444,6 +436,20 @@ void colorHandler() {
   g_val = server.arg("g").toInt();
   b_val = server.arg("b").toInt();
   colorMode = server.arg("colorMode").toInt();
+  switch (colorMode)
+  {
+  case 1:
+    brightness = 60;
+    colorPeriod = 20;
+    break;
+  case 2:
+    brightness = 255;
+    colorPeriod = 5;
+    break;
+  default:
+    brightness = 50;
+    break;
+  }
   server.send(200, "text/json", "{\"result\":\"ok\"}");
 }
 void brightnessHandler() {    
