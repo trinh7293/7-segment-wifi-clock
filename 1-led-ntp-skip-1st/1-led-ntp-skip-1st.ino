@@ -184,7 +184,7 @@ void loop() {
       FastLED.show();
     }
     // TODO add logic fastled show for color fluid 
-    EVERY_N_MILLISECONDS(10){
+    EVERY_N_MILLISECONDS(5){
       for (int i = 0; i < NUM_LEDS; i++) {
         colorIndex[i]++;
       }
@@ -443,6 +443,7 @@ void colorHandler() {
   r_val = server.arg("r").toInt();
   g_val = server.arg("g").toInt();
   b_val = server.arg("b").toInt();
+  colorMode = server.arg("colorMode").toInt();
   server.send(200, "text/json", "{\"result\":\"ok\"}");
 }
 void brightnessHandler() {    
@@ -488,7 +489,7 @@ void hourformatHandler() {
 // simple blue pallete
 void simple_blue_pallete () {
   for(byte i=0; i<NUM_LEDS; i++) {
-    LEDs[i] = ColorFromPalette(greenblue, i);
+    LEDs[i] = ColorFromPalette(greenblue, colorIndex[i]);
   }
 }
 
